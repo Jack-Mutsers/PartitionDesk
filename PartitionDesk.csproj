@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>PartitionDesk</AssemblyName>
+    <RootNamespace>PartitionDesk</RootNamespace>
+    <ApplicationIcon>Assets\PartitionDesk.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Release versions come from git tags via the GitHub pipeline (-p:Version=x.y.z). -->
+    <Version>0.0.0-local</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Product>PartitionDesk</Product>
+    <Copyright>Copyright © 2026 Jack Mutsers. Licensed under GPL-3.0.</Copyright>
+    <Description>Create, move, resize, clone and delete disk partitions</Description>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The self-test console app lives in its own project. -->
+    <Compile Remove="SelfTest\**" />
+    <None Remove="SelfTest\**" />
+    <Page Remove="SelfTest\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\PartitionDesk.ico" />
+  </ItemGroup>
+
+</Project>

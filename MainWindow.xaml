@@ -1,0 +1,126 @@
+<Window x:Class="PartitionDesk.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PartitionDesk" Width="1180" Height="720" MinWidth="860" MinHeight="520"
+        Icon="Assets/PartitionDesk.ico" Background="{DynamicResource Surface}" Foreground="{DynamicResource Text}" WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <Border BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1" Background="{DynamicResource Panel}" Padding="8,6">
+            <WrapPanel>
+                <Button x:Name="BtnRefresh" Style="{StaticResource ToolButton}" Click="Refresh_Click" ToolTip="Reload disks (F5)">⟳ Refresh</Button>
+                <Rectangle Width="1" Margin="6,4" Fill="{DynamicResource Line}"/>
+                <Button x:Name="BtnCreate" Style="{StaticResource ToolButton}" Click="Create_Click" ToolTip="Create a partition in unallocated space">＋ New</Button>
+                <Button x:Name="BtnFormat" Style="{StaticResource ToolButton}" Click="Format_Click">Format</Button>
+                <Button x:Name="BtnDelete" Style="{StaticResource ToolButton}" Click="Delete_Click">Delete</Button>
+                <Button x:Name="BtnForceDelete" Style="{StaticResource ToolButton}" Click="ForceDelete_Click" Foreground="{DynamicResource Danger}"
+                        ToolTip="Delete protected partitions (EFI, recovery, OEM, MSR) and override read-only flags">Force delete</Button>
+                <Rectangle Width="1" Margin="6,4" Fill="{DynamicResource Line}"/>
+                <Button x:Name="BtnResize" Style="{StaticResource ToolButton}" Click="Resize_Click" ToolTip="Shrink or extend the partition and its file system">Resize</Button>
+                <Button x:Name="BtnMove" Style="{StaticResource ToolButton}" Click="Move_Click" ToolTip="Move the partition within the free space around it">Move</Button>
+                <Button x:Name="BtnClone" Style="{StaticResource ToolButton}" Click="Clone_Click" ToolTip="Copy the partition into free space on any disk">Clone</Button>
+                <Button x:Name="BtnBootable" Style="{StaticResource ToolButton}" Click="Bootable_Click" ToolTip="Write an ISO image to a USB drive so a PC can boot from it">Bootable USB…</Button>
+                <Rectangle Width="1" Margin="6,4" Fill="{DynamicResource Line}"/>
+                <Button x:Name="BtnLetter" Style="{StaticResource ToolButton}" Click="Letter_Click">Drive letter</Button>
+                <Button x:Name="BtnLabel" Style="{StaticResource ToolButton}" Click="Label_Click">Label</Button>
+                <Button x:Name="BtnPartition" Style="{StaticResource ToolButton}" Click="ShowMenu_Click" ToolTip="More partition options">
+                    Partition ▾
+                    <Button.ContextMenu>
+                        <ContextMenu x:Name="PartitionMenu">
+                            <MenuItem x:Name="MiCheck" Header="Check file system" Click="Check_Click"/>
+                            <MenuItem x:Name="MiRepair" Header="Check and repair file system" Click="Repair_Click"/>
+                            <Separator/>
+                            <MenuItem x:Name="MiActive" Header="Mark as active (MBR boot)" Click="Active_Click"/>
+                            <MenuItem x:Name="MiHidden" Header="Hide / unhide" Click="Hidden_Click"/>
+                            <MenuItem x:Name="MiReadOnly" Header="Read-only on / off" Click="ReadOnly_Click"/>
+                            <MenuItem x:Name="MiType" Header="Change partition type…" Click="Type_Click"/>
+                            <Separator/>
+                            <MenuItem x:Name="MiProperties" Header="Properties" Click="Properties_Click"/>
+                        </ContextMenu>
+                    </Button.ContextMenu>
+                </Button>
+                <Button x:Name="BtnDisk" Style="{StaticResource ToolButton}" Click="ShowMenu_Click" ToolTip="Whole-disk options">
+                    Disk ▾
+                    <Button.ContextMenu>
+                        <ContextMenu x:Name="DiskMenu">
+                            <MenuItem x:Name="MiInitGpt" Header="Initialize as GPT" Click="InitGpt_Click"/>
+                            <MenuItem x:Name="MiInitMbr" Header="Initialize as MBR" Click="InitMbr_Click"/>
+                            <MenuItem x:Name="MiToGpt" Header="Convert to GPT (empty disk)" Click="ToGpt_Click"/>
+                            <MenuItem x:Name="MiToMbr" Header="Convert to MBR (empty disk)" Click="ToMbr_Click"/>
+                            <Separator/>
+                            <MenuItem x:Name="MiOnline" Header="Bring online / take offline" Click="Online_Click"/>
+                            <MenuItem x:Name="MiDiskReadOnly" Header="Read-only on / off" Click="DiskReadOnly_Click"/>
+                            <Separator/>
+                            <MenuItem x:Name="MiClean" Header="Clean disk (remove all partitions)…" Click="Clean_Click" Foreground="{DynamicResource Danger}"/>
+                        </ContextMenu>
+                    </Button.ContextMenu>
+                </Button>
+            </WrapPanel>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="270"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Disks -->
+            <Border BorderBrush="{DynamicResource Line}" BorderThickness="0,0,1,0" Background="{DynamicResource Panel}">
+                <ListBox x:Name="DiskList" BorderThickness="0" Background="Transparent" SelectionChanged="DiskList_SelectionChanged"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" Padding="6">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="10,8"/>
+                            <Setter Property="Margin" Value="0,0,0,4"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14"/>
+                                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Muted}" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <!-- Selected disk -->
+            <DockPanel Grid.Column="1" Margin="16,12,16,8">
+                <StackPanel DockPanel.Dock="Top">
+                    <TextBlock x:Name="DiskTitle" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="DiskSubtitle" Foreground="{DynamicResource Muted}" Margin="0,2,0,10"/>
+                    <Border BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="6" Padding="4" Height="92" Margin="0,0,0,12">
+                        <Grid x:Name="DiskMap"/>
+                    </Border>
+                </StackPanel>
+                <DataGrid x:Name="SegmentGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{DynamicResource Line}"
+                          BorderBrush="{DynamicResource Line}" RowHeight="28" CanUserResizeRows="False" Background="{DynamicResource Surface}"
+                          SelectionChanged="SegmentGrid_SelectionChanged" MouseDoubleClick="SegmentGrid_MouseDoubleClick">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Partition" Binding="{Binding Name}" Width="2*"/>
+                        <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="1.4*"/>
+                        <DataGridTextColumn Header="File system" Binding="{Binding FileSystem}" Width="*"/>
+                        <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" Width="*"/>
+                        <DataGridTextColumn Header="Used" Binding="{Binding UsedText}" Width="*"/>
+                        <DataGridTextColumn Header="Free" Binding="{Binding FreeText}" Width="*"/>
+                        <DataGridTextColumn Header="Starts at" Binding="{Binding OffsetText}" Width="*"/>
+                        <DataGridTextColumn Header="Flags" Binding="{Binding Flags}" Width="1.6*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </Grid>
+
+        <Border Grid.Row="2" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Background="{DynamicResource Panel}" Padding="12,5">
+            <TextBlock x:Name="StatusText" Foreground="{DynamicResource Muted}" Text="Loading disks…"/>
+        </Border>
+    </Grid>
+</Window>
