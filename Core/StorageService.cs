@@ -207,6 +207,11 @@ public sealed class StorageService
     public void FormatVolume(PartitionInfo p, string fileSystem, string label, uint clusterSize, bool full)
     {
         GuardInUse(p, "format");
+        if (fileSystem == "FAT32" && p.Size > 32 * Core.Format.GiB)
+        {
+            FormatLargeFat32(p, label, clusterSize);
+            return;
+        }
         var volume = WaitForVolume(p) ?? throw new StorageException("This partition has no volume that can be formatted.");
         var args = new Dictionary<string, object?>
         {
@@ -217,6 +222,20 @@ public sealed class StorageService
         };
         if (clusterSize > 0) args["AllocationUnitSize"] = clusterSize;
         Invoke(volume, "Format", args);
+    }
+
+    /// <summary>Windows refuses FAT32 above 32 GB, so larger volumes are written by our own formatter.</summary>
+    public void FormatLargeFat32(PartitionInfo p, string label, uint clusterSize)
+    {
+        var disk = GetDisk(p.DiskNumber);
+        p = disk.Partitions.FirstOrDefault(x => x.Offset == p.Offset) ?? throw new StorageException("The partition no longer exists.");
+        var problem = Fat32Formatter.Check(p.Size, disk.LogicalSectorSize, clusterSize);
+        if (problem != null) throw new StorageException(problem);
+        if (disk.Style == PartitionStyle.Mbr && p.MbrType != 0x0C) SetAttributes(p, mbrType: 0x0C);
+
+        using (p.VolumePath.Length > 0 ? new VolumeLock(p.VolumePath, dismountOnRelease: true) : null)
+            Fat32Formatter.Write(p.DiskNumber, p.Offset, p.Size, disk.LogicalSectorSize, clusterSize, label);
+        RefreshCache();
     }
 
     ManagementObject? WaitForVolume(PartitionInfo p)

@@ -1,4 +1,4 @@
-# Runs the engine self-test against a temporary 1 GB virtual disk. Must run elevated.
+# Runs the engine self-test against a temporary 48 GB (sparse) virtual disk. Must run elevated.
 # Only the VHDX created here is touched; the test refuses to run on any other disk.
 param([string]$Only = '')
 $ErrorActionPreference = 'Stop'
@@ -11,7 +11,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'build failed' }
 
     if (Test-Path $vhd) { Dismount-DiskImage -ImagePath $vhd -ErrorAction SilentlyContinue | Out-Null; Remove-Item $vhd -Force }
-    "create vdisk file=`"$vhd`" maximum=1024 type=expandable`nattach vdisk" | Set-Content "$env:TEMP\pd-selftest.txt" -Encoding ascii
+    "create vdisk file=`"$vhd`" maximum=49152 type=expandable`nattach vdisk" | Set-Content "$env:TEMP\pd-selftest.txt" -Encoding ascii
     diskpart /s "$env:TEMP\pd-selftest.txt" | Out-Null
     Start-Sleep 2
     $num = (Get-DiskImage -ImagePath $vhd | Get-Disk).Number

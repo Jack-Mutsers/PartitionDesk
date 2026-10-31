@@ -42,7 +42,6 @@ public sealed class IsoInfo
 /// <summary>Writes ISO images to USB drives so a PC can boot from them.</summary>
 public sealed class BootableMediaService
 {
-    const ulong Fat32Limit = 32UL * 1024 * 1024 * 1024;   // Windows formats FAT32 up to 32 GB
     const long FatMaxFile = 4L * 1024 * 1024 * 1024 - 1;
     readonly StorageService _storage;
 
@@ -185,7 +184,8 @@ public sealed class BootableMediaService
 
         log?.Report("Mounting the image");
         using var mount = IsoMount.Mount(iso.Path);
-        ulong partSize = Math.Min(Format.AlignDown(disk.UsableEnd, Format.MiB) - Format.MiB, Fat32Limit);
+        // FAT32 holds at most 2^32 sectors; larger volumes are formatted by our own formatter.
+        ulong partSize = Math.Min(Format.AlignDown(disk.UsableEnd, Format.MiB) - Format.MiB, Format.AlignDown(uint.MaxValue * (ulong)disk.LogicalSectorSize, Format.MiB));
         if (iso.FilesSize > partSize * 98 / 100)
             throw new StorageException($"The files ({Format.Bytes(iso.FilesSize)}) do not fit on the drive.");
 
