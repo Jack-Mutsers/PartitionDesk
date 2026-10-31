@@ -269,6 +269,53 @@ Step("Bootable: refuses a non-removable disk", () =>
     Expect<StorageException>(() => media.Create(win!, s.GetDisks().First(d => d.HoldsWindows), BootMode.RawImage,
         BootScheme.MbrBiosAndUefi, "", false, null, null, CancellationToken.None)));
 
+// ------------------------------------------------------------- FAT32 beyond Windows' 32 GB limit
+void Chkdsk(ulong offset)
+{
+    var result = s.CheckVolume(At(offset), false);
+    Console.WriteLine($"      chkdsk: {result}");
+    if (!result.StartsWith("No errors")) throw new Exception("file system check found problems");
+}
+
+void LargeFat32(string label, ulong size, uint cluster)
+{
+    var d = s.GetDisk(diskNo);
+    if (d.Style != PartitionStyle.Raw) s.CleanDisk(d);
+    s.InitializeDisk(s.GetDisk(diskNo), PartitionStyle.Gpt);
+    var p = s.CreatePartition(s.GetDisk(diskNo), 32 * MB, size);
+    if (cluster == 0) s.FormatVolume(p, "FAT32", label, 0, false);
+    else s.FormatLargeFat32(p, label, cluster);
+    s.AutoAssignDriveLetter(At(32 * MB));
+    var h = WriteSample(32 * MB);
+    var part = At(32 * MB);
+    var info = new DriveInfo(Root(32 * MB));
+    Console.WriteLine($"      {info.DriveFormat} '{info.VolumeLabel}' {Format.Bytes((ulong)info.TotalSize)}, {Format.Bytes((ulong)info.TotalFreeSpace)} free");
+    if (info.DriveFormat != "FAT32") throw new Exception($"mounted as {info.DriveFormat}");
+    if ((ulong)info.TotalSize < size * 99 / 100) throw new Exception("volume smaller than the partition");
+    if (!string.Equals(info.VolumeLabel, label, StringComparison.OrdinalIgnoreCase)) throw new Exception($"label '{info.VolumeLabel}'");
+    Verify(32 * MB, h, label);
+    Chkdsk(32 * MB);
+}
+
+Step("FAT32 on 40 GB (Windows refuses; default 32 KB clusters)", () => LargeFat32("3DS", 40UL * 1024 * MB, 0));
+Step("FAT32 on 40 GB with 64 KB clusters", () => LargeFat32("BIG64", 40UL * 1024 * MB, 65536));
+Step("FAT32 own formatter on 1 GB with 4 KB clusters", () => LargeFat32("SMALL", 1024 * MB, 4096));
+Step("FAT32 with too few clusters is refused (1 GB, 64 KB)", () =>
+    Expect<StorageException>(() => s.FormatLargeFat32(At(32 * MB), "X", 65536)));
+Step("MBR: FAT32 over the whole 48 GB disk", () =>
+{
+    s.CleanDisk(s.GetDisk(diskNo));
+    s.InitializeDisk(s.GetDisk(diskNo), PartitionStyle.Mbr);
+    var free = s.GetDisk(diskNo).Segments.Single(x => x.IsFree);
+    var p = s.CreatePartition(s.GetDisk(diskNo), free.Offset, free.Size);
+    s.FormatVolume(p, "FAT32", "WHOLE", 0, false);
+    s.AutoAssignDriveLetter(At(free.Offset));
+    var h = WriteSample(free.Offset);
+    Verify(free.Offset, h, "whole");
+    if (At(free.Offset).MbrType != 0x0C) throw new Exception($"MBR type 0x{At(free.Offset).MbrType:X2}");
+    Chkdsk(free.Offset);
+});
+
 Console.WriteLine(failures == 0 ? "ALL PASSED" : $"{failures} FAILED");
 return failures == 0 ? 0 : 1;
 

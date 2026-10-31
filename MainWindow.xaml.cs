@@ -296,7 +296,9 @@ public partial class MainWindow : Window
         var letter = dlg.AddCombo("Drive letter", letters, "Automatic");
         var quick = dlg.AddCheck("Quick format", true);
         dlg.AddValidator(() => size() + before() > freeMb ? "The partition does not fit in the free space at that position." : null);
-        dlg.AddValidator(() => fs() == "FAT32" && size() > 32 * 1024 ? "Windows can only format FAT32 up to 32 GB. Choose exFAT or NTFS." : null);
+        // Windows formats FAT32 up to 32 GB; above that our own formatter takes over.
+        dlg.AddValidator(() => fs() == "FAT32" && size() * Format.MiB > 32 * Format.GiB
+            ? Fat32Formatter.Check(size() * Format.MiB, d.LogicalSectorSize, 0) : null);
         if (!dlg.Run()) return;
 
         ulong offset = free.Offset + before() * Format.MiB;
@@ -335,7 +337,11 @@ public partial class MainWindow : Window
         var clusters = dlg.AddCombo("Allocation unit size", new uint[] { 0, 4096, 8192, 16384, 32768, 65536 }, 0u,
             v => v == 0 ? "Default" : $"{v / 1024} KB");
         var quick = dlg.AddCheck("Quick format", true);
-        dlg.AddValidator(() => fs() == "FAT32" && p.Size > 32 * Format.GiB ? "Windows can only format FAT32 up to 32 GB." : null);
+        if (p.Size > 32 * Format.GiB)
+            dlg.AddNote("FAT32 above 32 GB is written by PartitionDesk itself, since Windows refuses it (always a quick format). " +
+                        "Use it for devices that only read FAT32, such as game consoles; files can be at most 4 GB.");
+        var sectorSize = Disk?.LogicalSectorSize ?? 512;
+        dlg.AddValidator(() => fs() == "FAT32" && p.Size > 32 * Format.GiB ? Fat32Formatter.Check(p.Size, sectorSize, clusters()) : null);
         if (!dlg.Run()) return;
         string f = fs(), l = label();
         uint c = clusters();
